@@ -1,0 +1,33 @@
+# the flags for train
+ifeq ($(CHINESE_STTAGGER_IMPL), segmented) # if segmented	
+	STTAGGER_TRAIN_FLAGS = -DSEGMENTED
+	STTAGGER_TEST_FLAGS = -DSEGMENTED
+else 
+	ifeq ($(CHINESE_STTAGGER_IMPL), bidirectional) # else if bidirectional
+		STTAGGER_TRAIN_FLAGS = -DSEGMENTED -DAUTO
+		STTAGGER_TEST_FLAGS = -DSEGMENTED
+	endif
+endif
+
+chinese.stpostagger: $(OBJECT_DIR) $(DIST_DIR) $(OBJECT_STTAGGER) $(DIST_STTAGGER) $(DIST_STTAGGER)/tagger $(DIST_STTAGGER)/train
+	@echo The Chinese word tagger system is compiled successfully into $(DIST_STTAGGER).
+
+# the weight module
+$(OBJECT_STTAGGER)/weight.o: $(OBJECT_STTAGGER) $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/weight.h $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/weight.cpp $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/impl_include.h $(SRC_CHINESE)/tags.h ./Makefile
+	$(CXX) $(CXXFLAGS) -I$(SRC_CHINESE) -I$(SRC_STTAGGER) -I$(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL) -c $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/weight.cpp -o $(OBJECT_STTAGGER)/weight.o
+
+# the tagger module
+$(OBJECT_DIR)/chinese.stpostagger.o: $(SRC_INCLUDES)/hash.h $(SRC_CHINESE)/tags.h $(SRC_CHINESE)/charcat.h $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/tagger.h $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/weight.h $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/tagger.cpp $(SRC_STTAGGER)/tagger_base.h $(SRC_STTAGGER)/stackfeats.h $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/impl_include.h ./Makefile
+	$(CXX) $(CXXFLAGS) -I$(SRC_CHINESE) -I$(SRC_STTAGGER) -I$(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL) -c $(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL)/tagger.cpp -o $(OBJECT_DIR)/chinese.stpostagger.o
+
+# the tagger executable
+$(DIST_STTAGGER)/tagger: $(SRC_STTAGGER)/main.cpp $(OBJECT_STTAGGER)/weight.o $(OBJECT_DIR)/chinese.stpostagger.o $(OBJECTS)
+	$(CXX) $(STTAGGER_TRAIN_FLAGS) $(CXXFLAGS) -I$(SRC_CHINESE) -I$(SRC_STTAGGER) -I$(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL) -c $(SRC_STTAGGER)/main.cpp -o $(OBJECT_STTAGGER)/main.o
+	$(LD) $(LDFLAGS) -o $(DIST_STTAGGER)/tagger $(OBJECT_DIR)/chinese.stpostagger.o $(OBJECT_STTAGGER)/main.o $(OBJECT_STTAGGER)/weight.o $(OBJECT_DIR)/reader.o $(OBJECT_DIR)/writer.o $(OBJECT_DIR)/options.o
+
+# the trainer for tagger
+$(DIST_STTAGGER)/train: $(SRC_STTAGGER)/train.cpp $(OBJECT_STTAGGER)/weight.o $(OBJECT_DIR)/chinese.stpostagger.o $(OBJECTS)
+	$(CXX) $(STTAGGER_TEST_FLAGS) $(CXXFLAGS) -I$(SRC_CHINESE) -I$(SRC_STTAGGER) -I$(SRC_STTAGGER)/implementations/$(CHINESE_STTAGGER_IMPL) -c $(SRC_STTAGGER)/train.cpp -o $(OBJECT_STTAGGER)/train.o
+	$(LD) $(LDFLAGS) -o $(DIST_STTAGGER)/train $(OBJECT_DIR)/chinese.stpostagger.o $(OBJECT_STTAGGER)/weight.o $(OBJECT_STTAGGER)/train.o $(OBJECT_DIR)/reader.o $(OBJECT_DIR)/writer.o $(OBJECT_DIR)/options.o
+
+#==============================

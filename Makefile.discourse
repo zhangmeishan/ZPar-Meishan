@@ -1,0 +1,33 @@
+#===============================
+
+DIST_ENGLISH_DISCOURSE = $(DIST_DIR)/english.discourse
+OBJECT_ENGLISH_DISCOURSE = $(OBJECT_DIR)/english.discourse
+$(DIST_ENGLISH_DISCOURSE):
+	mkdir $(DIST_ENGLISH_DISCOURSE)
+$(OBJECT_ENGLISH_DISCOURSE):
+	mkdir $(OBJECT_ENGLISH_DISCOURSE)
+english.discourse: $(OBJECT_DIR) $(DIST_DIR) $(OBJECT_ENGLISH_DISCOURSE) $(DIST_ENGLISH_DISCOURSE) $(DIST_ENGLISH_DISCOURSE)/discourse $(DIST_ENGLISH_DISCOURSE)/train 
+	@echo The English discourser parser system is compiled successfully into $(DIST_ENGLISH_DISCOURSE).
+
+# the disconstituent
+$(OBJECT_ENGLISH_DISCOURSE)/disconstituent.o: $(OBJECT_DISCOURSE) $(SRC_ENGLISH)/cfg.h $(SRC_LIBS)/linguistics/disconstituent.cpp
+	$(CXX) $(CXXFLAGS) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -c $(SRC_LIBS)/linguistics/disconstituent.cpp -o $@
+
+# the weight module
+$(OBJECT_ENGLISH_DISCOURSE)/weight.o: $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/discourse_macros.h $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/action.h $(SRC_COMMON_DISCOURSE)/weight_base.h $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/weight.h $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/weight.cpp ./Makefile
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DISCOURSE_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_COMMON_DISCOURSE) -I$(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL) -c $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/weight.cpp -o $(OBJECT_ENGLISH_DISCOURSE)/weight.o
+
+# the discourse object
+$(OBJECT_DIR)/english.discourse.o: $(OBJECT_ENGLISH_DISCOURSE) $(SRC_INCLUDES)/hash.h $(SRC_COMMON_DISCOURSE)/discourse_base.h $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/discourse.h $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/discourse.cpp $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/stateitem.h $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/action.h $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/discourse_macros.h $(OBJECT_ENGLISH_DISCOURSE)/disconstituent.o ./Makefile
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DISCOURSE_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_COMMON_DISCOURSE) -I$(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL) -c $(SRC_COMMON_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL)/discourse.cpp -o $(OBJECT_DIR)/english.discourse.o
+
+# the main executable
+$(DIST_ENGLISH_DISCOURSE)/discourse: $(SRC_ENGLISH_DISCOURSE)/main.cpp $(OBJECT_DIR)/english.discourse.o $(OBJECT_ENGLISH_DISCOURSE)/weight.o $(OBJECT_ENGLISH_DISCOURSE)/disconstituent.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DISCOURSE_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_ENGLISH_DISCOURSE) -I$(SRC_ENGLISH_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL) -c $(SRC_ENGLISH_DISCOURSE)/main.cpp -o $(OBJECT_ENGLISH_DISCOURSE)/main.o
+	$(LD) $(LDFLAGS) -o $(DIST_ENGLISH_DISCOURSE)/discourse $(OBJECT_DIR)/english.discourse.o $(OBJECT_ENGLISH_DISCOURSE)/weight.o $(OBJECT_ENGLISH_DISCOURSE)/main.o $(OBJECT_DIR)/reader.o $(OBJECT_DIR)/writer.o $(OBJECT_DIR)/options.o $(OBJECT_ENGLISH_DISCOURSE)/disconstituent.o 
+
+# the trainer for discourse
+$(DIST_ENGLISH_DISCOURSE)/train: $(SRC_ENGLISH_DISCOURSE)/train.cpp $(OBJECT_DIR)/english.discourse.o $(OBJECT_ENGLISH_DISCOURSE)/weight.o $(OBJECTS) $(OBJECT_ENGLISH_DISCOURSE)/disconstituent.o
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DISCOURSE_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_ENGLISH_DISCOURSE) -I$(SRC_ENGLISH_DISCOURSE)/implementations/$(ENGLISH_DISCOURSE_IMPL) -c $(SRC_ENGLISH_DISCOURSE)/train.cpp -o $(OBJECT_ENGLISH_DISCOURSE)/train.o
+	$(LD) $(LDFLAGS) -o $(DIST_ENGLISH_DISCOURSE)/train $(OBJECT_DIR)/english.discourse.o $(OBJECT_ENGLISH_DISCOURSE)/weight.o $(OBJECT_ENGLISH_DISCOURSE)/train.o $(OBJECT_DIR)/reader.o $(OBJECT_DIR)/writer.o $(OBJECT_DIR)/options.o $(OBJECT_ENGLISH_DISCOURSE)/disconstituent.o
+

@@ -1,0 +1,65 @@
+
+ifeq ($(CHINESE_DEPSEM_LABELED), true)
+	CHINESE_DEPSEM_D = -DLABELED
+endif
+
+ifeq ($(ENGLISH_DEPSEM_LABELED), true)
+	ENGLISH_DEPSEM_D = -DLABELED
+endif
+
+#====================================================
+
+$(DIST_DEPSEM):
+	mkdir $(DIST_DEPSEM)
+$(OBJECT_DEPSEM):
+	mkdir $(OBJECT_DEPSEM)
+chinese.depsem: $(OBJECT_DIR) $(DIST_DIR) $(OBJECT_DEPSEM) $(DIST_DEPSEM) $(DIST_DEPSEM)/depsem $(DIST_DEPSEM)/train
+	@echo The Chinese dependency parser system is compiled successfully into $(DIST_DEPSEM).
+
+# the weight module
+$(OBJECT_DEPSEM)/weight.o: $(OBJECT_DEPSEM) $(SRC_COMMON_DEPSEM)/depsem_weight_base.h $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/depsem_weight.h $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/depsem_weight.cpp ./Makefile
+	$(CXX) $(CXXFLAGS) $(CHINESE_DEPSEM_D) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/depsem_weight.cpp -o $(OBJECT_DEPSEM)/weight.o
+
+# the depsem object
+$(OBJECT_DIR)/chinese.depsem.o: $(SRC_INCLUDES)/hash.h $(SRC_CHINESE)/dep.h $(SRC_CHINESE)/sem.h $(SRC_COMMON_DEPSEM)/depsem_base.h $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/depsem.h $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/depsem.cpp $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/state.h $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/depsem_macros.h $(SRC_COMMON_DEPSEM)/stackfeats.h ./Makefile
+	$(CXX) $(CXXFLAGS) $(CHINESE_DEPSEM_D) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL)/depsem.cpp -o $(OBJECT_DIR)/chinese.depsem.o
+
+# the main executable
+$(DIST_DEPSEM)/depsem: $(SRC_COMMON_DEPSEM)/main.cpp $(OBJECT_DIR)/chinese.depsem.o $(OBJECT_DEPSEM)/weight.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(CHINESE_DEPSEM_D) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/main.cpp -o $(OBJECT_DEPSEM)/main.o
+	$(LD) $(LDFLAGS) -o $(DIST_DEPSEM)/depsem $(OBJECT_DIR)/chinese.depsem.o $(OBJECT_DEPSEM)/weight.o $(OBJECT_DEPSEM)/main.o $(OBJECTS)
+
+# the trainer for depsem
+$(DIST_DEPSEM)/train: $(SRC_COMMON_DEPSEM)/train.cpp $(OBJECT_DIR)/chinese.depsem.o $(OBJECT_DEPSEM)/weight.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(CHINESE_DEPSEM_D) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(CHINESE_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/train.cpp -o $(OBJECT_DEPSEM)/train.o
+	$(LD) $(LDFLAGS) -o $(DIST_DEPSEM)/train $(OBJECT_DIR)/chinese.depsem.o $(OBJECT_DEPSEM)/weight.o $(OBJECT_DEPSEM)/train.o $(OBJECTS)
+
+#====================================================
+
+
+$(DIST_ENGLISH_DEPSEM):
+	mkdir $(DIST_ENGLISH_DEPSEM)
+$(OBJECT_ENGLISH_DEPSEM):
+	mkdir $(OBJECT_ENGLISH_DEPSEM)
+english.depsem: $(OBJECT_DIR) $(DIST_DIR) $(OBJECT_ENGLISH_DEPSEM) $(DIST_ENGLISH_DEPSEM) $(DIST_ENGLISH_DEPSEM)/depsem $(DIST_ENGLISH_DEPSEM)/train 
+	@echo The English dependency parser system is compiled successfully into $(DIST_ENGLISH_DEPSEM).
+
+# the weight module
+$(OBJECT_ENGLISH_DEPSEM)/weight.o: $(OBJECT_ENGLISH_DEPSEM) $(SRC_COMMON_DEPSEM)/depsem_weight_base.h $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/depsem_weight.h $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/depsem_weight.cpp ./Makefile
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DEPSEM_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/depsem_weight.cpp -o $(OBJECT_ENGLISH_DEPSEM)/weight.o
+
+# the depsem object
+$(OBJECT_DIR)/english.depsem.o: $(SRC_INCLUDES)/hash.h $(SRC_COMMON_DEPSEM)/depsem_base.h  $(SRC_COMMON_DEPSEM)/stackfeats.h $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/depsem.h $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/depsem.cpp $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/state.h $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/depsem_macros.h $(SRC_ENGLISH)/dep.h $(SRC_ENGLISH)/sem.h ./Makefile
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DEPSEM_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL)/depsem.cpp -o $(OBJECT_DIR)/english.depsem.o
+
+# the main executable
+$(DIST_ENGLISH_DEPSEM)/depsem: $(SRC_COMMON_DEPSEM)/main.cpp $(OBJECT_DIR)/english.depsem.o $(OBJECT_ENGLISH_DEPSEM)/weight.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DEPSEM_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/main.cpp -o $(OBJECT_ENGLISH_DEPSEM)/main.o
+	$(LD) $(LDFLAGS) -o $(DIST_ENGLISH_DEPSEM)/depsem $(OBJECT_DIR)/english.depsem.o $(OBJECT_ENGLISH_DEPSEM)/weight.o $(OBJECT_ENGLISH_DEPSEM)/main.o $(OBJECTS)
+
+# the trainer for depsem
+$(DIST_ENGLISH_DEPSEM)/train: $(SRC_COMMON_DEPSEM)/train.cpp $(OBJECT_DIR)/english.depsem.o $(OBJECT_ENGLISH_DEPSEM)/weight.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(ENGLISH_DEPSEM_D) -DTARGET_LANGUAGE=english -I$(SRC_ENGLISH) -I$(SRC_COMMON_DEPSEM) -I$(SRC_COMMON_DEPSEM)/implementations/$(ENGLISH_DEPSEM_IMPL) -c $(SRC_COMMON_DEPSEM)/train.cpp -o $(OBJECT_ENGLISH_DEPSEM)/train.o
+	$(LD) $(LDFLAGS) -o $(DIST_ENGLISH_DEPSEM)/train $(OBJECT_DIR)/english.depsem.o $(OBJECT_ENGLISH_DEPSEM)/weight.o $(OBJECT_ENGLISH_DEPSEM)/train.o $(OBJECTS)
+
+

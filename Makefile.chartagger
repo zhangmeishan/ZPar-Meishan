@@ -1,0 +1,28 @@
+
+$(DIST_CHARTAGGER):
+	mkdir $(DIST_CHARTAGGER)
+$(OBJECT_CHARTAGGER):
+	mkdir $(OBJECT_CHARTAGGER)
+	
+chinese.chartagger: $(OBJECT_DIR) $(DIST_DIR) $(OBJECT_CHARTAGGER) $(DIST_CHARTAGGER) $(DIST_CHARTAGGER)/chartagger $(DIST_CHARTAGGER)/train
+	@echo The Chinese character level tagger system is compiled successfully into $(DIST_CHARTAGGER).
+
+# the weight module
+$(OBJECT_CHARTAGGER)/weight.o: $(OBJECT_CHARTAGGER) $(SRC_CHARTAGGER)/chartagger_weight_base.h $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/chartagger_weight.h $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/chartagger_weight.cpp ./Makefile
+	$(CXX) $(CXXFLAGS) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_CHARTAGGER) -I$(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL) -c $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/chartagger_weight.cpp -o $(OBJECT_CHARTAGGER)/weight.o
+
+# the chartagger object
+$(OBJECT_DIR)/chinese.chartagger.o: $(SRC_INCLUDES)/hash.h $(SRC_CHARTAGGER)/chartagger_base.h $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/chartagger.h $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/chartagger.cpp $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/state.h $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/chartagger_macros.h $(SRC_CHARTAGGER)/stackfeats.h ./Makefile
+	$(CXX) $(CXXFLAGS) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_CHARTAGGER) -I$(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL) -c $(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL)/chartagger.cpp -o $(OBJECT_DIR)/chinese.chartagger.o
+
+# the main executable
+$(DIST_CHARTAGGER)/chartagger: $(SRC_CHARTAGGER)/main.cpp $(OBJECT_DIR)/chinese.chartagger.o $(OBJECT_CHARTAGGER)/weight.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_CHARTAGGER) -I$(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL) -c $(SRC_CHARTAGGER)/main.cpp -o $(OBJECT_CHARTAGGER)/main.o
+	$(LD) $(LDFLAGS) -o $(DIST_CHARTAGGER)/chartagger $(OBJECT_DIR)/chinese.chartagger.o $(OBJECT_CHARTAGGER)/weight.o $(OBJECT_CHARTAGGER)/main.o $(OBJECTS)
+
+# the trainer for chartagger
+$(DIST_CHARTAGGER)/train: $(SRC_CHARTAGGER)/train.cpp $(OBJECT_DIR)/chinese.chartagger.o $(OBJECT_CHARTAGGER)/weight.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -DTARGET_LANGUAGE=chinese -I$(SRC_CHINESE) -I$(SRC_CHARTAGGER) -I$(SRC_CHARTAGGER)/implementations/$(CHINESE_CHARTAGGER_IMPL) -c $(SRC_CHARTAGGER)/train.cpp -o $(OBJECT_CHARTAGGER)/train.o
+	$(LD) $(LDFLAGS) -o $(DIST_CHARTAGGER)/train $(OBJECT_DIR)/chinese.chartagger.o $(OBJECT_CHARTAGGER)/weight.o $(OBJECT_CHARTAGGER)/train.o $(OBJECTS)
+
+
