@@ -15,7 +15,7 @@
 //#define LOCAL_LEARNING
 
 // The size of agenda
-#define AGENDA_SIZE 64
+#define AGENDA_SIZE 16
 
 
 const unsigned POS_LABEL_COUNT = TARGET_LANGUAGE::CTag::COUNT;

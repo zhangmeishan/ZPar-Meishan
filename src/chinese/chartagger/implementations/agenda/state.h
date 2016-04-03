@@ -47,7 +47,7 @@ public:
   int m_nInnerStackSize;
   bool m_HeadSet[MAX_SENTENCE_SIZE]; // stack of words that already have heads
   int m_nHeadSetSize;
-  int m_Action[2 * MAX_SENTENCE_SIZE];
+  int m_Action[3 * MAX_SENTENCE_SIZE];
   int m_nActionSize;
   int m_nNextWord;                         // index for the next word
   int m_nHeads[MAX_SENTENCE_SIZE];         // the lexical head for each word
@@ -73,11 +73,40 @@ public:
   }
   ~CStateItem() {
   }
-  CStateItem(CStateItem& item) :
-      m_nSentLen(0) {
-    std::cerr << "CStateItem does not support copy constructor!";
-    std::cerr.flush();
-    assert(1 == 0);
+
+  CStateItem(CStateItem& item) {
+    m_nStackSize = item.m_nStackSize;
+    m_nInnerStackSize = item.m_nInnerStackSize;
+
+    for (int i = 0; i < m_nStackSize; i++) {
+      m_Stack[i] = item.m_Stack[i];
+    }
+
+    m_nActionSize = item.m_nActionSize;
+
+    for (int i = 0; i < m_nActionSize; i++) {
+      m_Action[i] = item.m_Action[i];
+    }
+
+    m_nHeadSetSize = item.m_nHeadSetSize;
+    m_nNextWord = item.m_nNextWord;
+
+    m_nLastAction = item.m_nLastAction;
+    m_nSentLen = item.m_nSentLen;
+    score = item.score;
+    for (int i = 0; i <= m_nNextWord; ++i) { // only copy active word (including m_nNext)
+      m_HeadSet[i] = item.m_HeadSet[i];
+      {
+        m_nHeads[i] = item.m_nHeads[i];
+        m_nCoverStart[i] = item.m_nCoverStart[i];
+        m_nCoverEnd[i] = item.m_nCoverEnd[i];
+        m_bLabelTypes[i] = item.m_bLabelTypes[i];
+      }
+      m_nPOSs[i] = item.m_nPOSs[i];
+      m_bPOSTypes[i] = item.m_bPOSTypes[i];
+    }
+    m_preState = item.m_preState;
+    ClearNext();
   }
 
 public:
@@ -404,7 +433,7 @@ public:
       std::cout << "error" << std::endl;
     }
 
-    int top0 = m_Stack[m_nStackSize - 1];
+    int top0 = m_nStackSize > 0 ? m_Stack[m_nStackSize - 1] : -1;
 
     m_nStackSize++;
     m_nInnerStackSize = 1;
@@ -413,7 +442,7 @@ public:
     m_nPOSs[m_nNextWord] = lab;
     m_bPOSTypes[m_nNextWord] = true;
     m_bLabelTypes[m_nNextWord] = false;
-    m_bLabelTypes[top0] = true;
+    if(top0>0)m_bLabelTypes[top0] = true;
 
     m_nCoverStart[m_nNextWord] = m_nNextWord;
     m_nCoverEnd[m_nNextWord] = m_nNextWord;
@@ -487,7 +516,7 @@ public:
       Idle();
       return;
     case action::SHIFT_IN:
-      Shift(0);
+      ShiftIn();
       return;
     default:
       THROW("unknown action: " << ac << '.');
@@ -556,7 +585,7 @@ public:
   //}
 
   bool IsTerminated() const {
-    return m_nLastAction == action::FINISH or m_nLastAction == action::IDLE;
+    return m_nLastAction == action::FINISH || m_nLastAction == action::IDLE;
   }
 
   bool IsIdle() const {
@@ -625,7 +654,7 @@ public:
 
   void GenerateTree(const CStringVector &input, CDependencyParse &output) const {
     output.clear();
-    for (int i = 0; i < nextword(); ++i)
+    for (int i = 0; i < nextword() && i < m_nSentLen; ++i)
       output.push_back(
           CCharDependencyTreeNode(input.at(i), CTag(m_nPOSs[i]).str(), m_bPOSTypes[i] ? "b" : "i", m_nHeads[i], "ROOT",
               m_bLabelTypes[i] ? "out" : "in"));

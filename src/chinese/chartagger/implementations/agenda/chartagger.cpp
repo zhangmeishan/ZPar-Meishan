@@ -68,7 +68,7 @@ inline SCORE_TYPE CCharTagger::getOrUpdateStackScore(const CStateItem *item, con
 
   //queue
   static int n0_index, n1_index, n2_index, n3_index;
-  n0_index = item->nextword() == m_Sentence.size() ? -1 : item->nextword(); // next
+  n0_index = item->nextword() >= m_Sentence.size() ? -1 : item->nextword(); // next
   n1_index = (n0_index != -1 && n0_index + 1 < m_Sentence.size()) ? n0_index + 1 : -1;
   n2_index = (n0_index != -1 && n0_index + 2 < m_Sentence.size()) ? n0_index + 2 : -1;
   n3_index = (n0_index != -1 && n0_index + 3 < m_Sentence.size()) ? n0_index + 3 : -1;
@@ -188,15 +188,17 @@ inline SCORE_TYPE CCharTagger::getOrUpdateStackScore(const CStateItem *item, con
       score += curweights->m_mapTagByLastChar.getOrUpdateScore(std::make_pair(st0_echar, st0_tag), m_nScoreIndex, amount, round);
       score += curweights->m_mapTagByLastCharCat.getOrUpdateScore(std::make_pair(st0_echarcat, st0_tag), m_nScoreIndex, amount, round);
 
-      for (j = 0; j < st0_length - 1; ++j) {
-        wt1.load(find_or_replace_word_cache(st0_start_index + j, st0_start_index + j), st0_tag);
-        wt2.load(st0_echar); //
-        if (amount == 0) {
-          wt12.refer(&wt1, &wt2);
-        } else {
-          wt12.allocate(wt1, wt2);
+      if(st0_index > 0){
+        for (j = 0; j < st0_length - 1; ++j) {
+          wt1.load(find_or_replace_word_cache(st0_start_index + j, st0_start_index + j), st0_tag);
+          wt2.load(st0_echar); //
+          if (amount == 0) {
+            wt12.refer(&wt1, &wt2);
+          } else {
+            wt12.allocate(wt1, wt2);
+          }
+          score += curweights->m_mapTaggedCharByLastChar.getOrUpdateScore(wt12, m_nScoreIndex, amount, round);
         }
-        score += curweights->m_mapTaggedCharByLastChar.getOrUpdateScore(wt12, m_nScoreIndex, amount, round);
       }
     }
 
@@ -530,7 +532,6 @@ inline void CCharTagger::shift(const CStateItem *item) {
     SCORE_TYPE score = getOrUpdateStackScore(item, scoredaction.action);
     scoredaction.score = item->score + score;
     m_Beam->insertItem(&scoredaction);
-
   }
 
 }
@@ -638,7 +639,7 @@ void CCharTagger::work(const bool bTrain, const CStringVector &sentence, CDepend
   static unsigned long correction_action;
   const int length = sentence.size();
 
-  const int max_round = length * 2 + 1;
+  const int max_round = length * 3 + 1;
   const int max_lattice_size = (AGENDA_SIZE + 1) * max_round;
 
   CStateItem * lattice = getLattice(max_lattice_size);
@@ -710,24 +711,28 @@ void CCharTagger::work(const bool bTrain, const CStringVector &sentence, CDepend
       }
     }
 
+    lattice_index[round + 1] = lattice_index[round] + current_beam_size;
+
     best_generator = (*lattice_index[round]);
+    int debug = 0;
     for (CStateItem ** q = lattice_index[round]; q != lattice_index[round + 1]; ++q) {
       CStateItem * p = (*q);
       if (best_generator->score < p->score) {
         best_generator = p;
       }
+      debug++;
     }
 
     if (best_generator->IsTerminated()) {
+      if(best_generator->m_nNextWord < length){
+        std::cout << "error decoding" << std::endl;
+      }
       break;
     }
 
-    lattice_index[round + 1] = lattice_index[round] + current_beam_size;
-
     if (bTrain) {
       CStateItem next_correct_state(*correct_state);
-      correction_action = next_correct_state.StandardMoveStep(correct);
-      next_correct_state.Move(correction_action);
+      next_correct_state.StandardMoveStep(correct);
       next_correct_state.m_preState = correct_state;
       is_correct = false;
 
@@ -740,7 +745,7 @@ void CCharTagger::work(const bool bTrain, const CStringVector &sentence, CDepend
       }
 
       if (!is_correct) {
-        TRACE("ERROR at the " << next_correct_state.size() << "th word;"
+        TRACE("ERROR at the " << next_correct_state.m_nActionSize << "th word;"
             << " Total is " << correct.size());
 
         updateScoresForStates(best_generator, &next_correct_state, 1, -1);
@@ -751,26 +756,35 @@ void CCharTagger::work(const bool bTrain, const CStringVector &sentence, CDepend
 
   if (bTrain) {
     CStateItem next_correct_state(*correct_state);
-    correction_action = next_correct_state.StandardMoveStep(correct);
-    next_correct_state.Move(correction_action);
+    next_correct_state.StandardMoveStep(correct);
     next_correct_state.m_preState = correct_state;
 
-    if (best_generator->m_preState != correct_state || best_generator->m_nLastAction != correction_action) {
+    if (best_generator->m_preState != correct_state || best_generator->m_nLastAction != next_correct_state.m_nLastAction) {
       updateScoresForStates(best_generator, &next_correct_state, 1, -1);
+    }
+    else{
+      TRACE("Corrected");
     }
     return;
   }
 
   TRACE("Output sentence");
-  std::sort(lattice_index[round - 1], lattice_index[round], StateHeapMore);
-  num_results = lattice_index[round] - lattice_index[round - 1];
+  //std::sort(lattice_index[round - 1], lattice_index[round], StateHeapMore);
+  //num_results = lattice_index[round] - lattice_index[round - 1];
 
+  // current not support for n-best
+  /*
   for (int i = 0; i < std::min(num_results, nBest); ++i) {
     (*(lattice_index[round - 1] + i))->GenerateTree(sentence, retval[i]);
     if (scores) {
       scores[i] = (*(lattice_index[round - 1] + i))->score;
     }
-  }TRACE("Done, total time spent: " << double(clock() - total_start_time) / CLOCKS_PER_SEC);
+  }*/
+  best_generator->GenerateTree(sentence, retval[0]);
+  if (scores) {
+    scores[0] = best_generator->score;
+  }
+  TRACE("Done, total time spent: " << double(clock() - total_start_time) / CLOCKS_PER_SEC);
 
 }
 

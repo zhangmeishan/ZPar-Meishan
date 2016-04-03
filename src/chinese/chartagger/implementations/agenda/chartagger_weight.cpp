@@ -151,7 +151,7 @@ void CWeight::saveScores() {
   os << "Can start" << std::endl;
   os << m_mapCanStart;
 
-  os << std::endl << "Maximum wordlen by tag" << std::endl;
+  os << "Maximum wordlen by tag" << std::endl;
   for (int i = 0; i < CTag::COUNT; ++i)
     os << CTag(i).str() << "\t" << m_maxLengthByTag[i] << std::endl;
   os << "All\t" << m_maxLengthByTag[CTag::COUNT] << std::endl;
